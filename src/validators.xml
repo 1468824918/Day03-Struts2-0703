@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE validators PUBLIC
+        "-//Apache Struts//XWork Validator Definition 1.0//EN"
+        "http://struts.apache.org/dtds/xwork-validator-definition-1.0.dtd">
+<validators>
+    <!--在此处声明自定义验证类型,格式参见validator/validators/default.xml文件-->
+
+    <!--定义自定义输入验证类型 name 给当前验证的命名; class: 指向验证器的类路径-->
+    <validator name="idcard" class="com.lanou.util.IDCardValidator">
+
+    </validator>
+</validators>

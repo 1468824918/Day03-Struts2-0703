@@ -1,0 +1,68 @@
+一.输入验证
+1. 硬编码的方式,即在动作类中编写输入验证
+    a.当前动作类必须继承自ActionSupport  ActionSupport类除了实现Action接口,还实现了Validate接口, 该接口就一个抽象方法validate方法
+    b.validate方法用于验证该动作类中的所有动作执行前输入是否合法;
+    c.validate方法会早于动作方法前执行,晚于getModel方法后执行
+    d.如果在validate方法中添加输入验证失败的信息,即调用了addActionError或者调用了addFieldError方法,则该动作直接返回input结果;不在执行动作方法
+    e.如果某个动作加入了输入验证,则必须在result结果中添加name="input"的处理方式,否则当出现验证失败时找不到对应的结果执行,导致报错;
+    f.错误信息可以在jsp页面使用struts标签: <s:fieldError>或则<s:actionError>显示;
+    g.@SkipValidation注解用于注明某个方法跳过输入验证;
+    h.给某个方法加验证的方式为在某个动作类中添加名字为:
+        public void validateXXX();其中XXX为该动作方法的方法名,
+        方法名首字母大写,例如给register方法添加输入验,
+        则验证方法名为validateRegister;
+2.声明式验证,即建立对应的配置文件 (推荐)
+    a.给某一个动作类中的所有方法添加输入验证,则在动作类同级目录下建名字为XXX-validation.xml的配置文件;
+    b.给某个动作类中的某个方法添加输入验证,则在动作类同级目录下建名字为XXX-YYY-validation.xml的配置文件,其中XXX为动作类的类名,
+    YYY为动作类中动作方法名,要求必须完全一致;
+    c.在输入验证配置问价中必须要加入validator的声明,参见xwork/xwork-validator-1.0.x.dtd中的声明;
+    <!DOCTYPE validators PUBLIC
+            "-//Apache Struts//XWork Validator 1.0.3//EN"
+            "http://struts.apache.org/dtds/xwork-validator-1.0.3.dtd">
+    d.验证文件的根标签是<validators>,代表当前xml文件是一个验证文件;
+    e.<field>:给某个属性添加验证规则,其中name属性代表动作类中的某个属性
+    f.<field-validator> : 属性验证规则其中type属性对应了struts支持的常见规则,这些规则参见xwork/com/struts/validator/validators/default.xml的配置声明;
+    g.常见type有:
+        required:空对象判断
+        requiredstring:空字符串判断
+        email:邮箱判断
+        url:地址判断
+        regex:正则表达式判断
+    h.<field-validator>的子标签:
+        <message>:错误信息提示
+        <param>: 一般与正则表达式的regex搭配使用,定义正则的规则;
+3.自定义验证 (仿照RequireStringValidator类编写)
+    a.创建一个类继承FieldValidatorSupport,覆写其验证方法validate(IDCardValidator);
+    b.编写具体的验证方式: (validate方法内进行的)
+        getFieldName(): 获得要验证的属性名称;
+        getFieldValue(): 获得要验证的属性值;
+        根据获得的属性值进行相关的验证,如果IDCard格式验证,不符合验证条件
+            调用addFieldError()方法添加输入验证信息;
+    c:在src根目录下创建validators.xml文件,用于声明自定义验证类型;声明方式参见xwork/validator/validators/default.xml文件中的声明方式
+        <validators>: 验证类型的根标签
+        <validator>: 某一个验证类型的声明,改标签有两个属性,name:自定义,外部访问的名称;
+        class:指向自定义输入验证的实现类,(IDCardValidator)
+    d.使用自定义验证类型,与RequiredString的用法一样, 在<field-validator>标签中的type属性中使用声明的name名称(idcard);
+二.拦截器
+    2.1 struts提供了很多的拦截器,参见struts-default.xml文件,当我们的package继承自struts-default时就继承了它里面定义各种拦截器
+    2.2 struts-default这个的默认的拦截栈是defaultStack;
+    2.3 定义一个自定义拦截器的步骤:
+        2.3.1 创建一个类继承AbstractInterceptor 或者 MethodFilterInterceptor;
+        其中MethodFilterInterceptor 是 AbstractInterceptor的子类,该类多出了两个Set集合.,excludeMethod:哪些方法不拦截;includeMethod:哪些方法拦截;
+        2.3.2 覆写拦截器中的抽象方法 interception或者doInterceptor;在该拦截的方法中进行业务处理,其中invoke方法是拦截放行的方法;
+        执行顺序: interceptor方法-> invoke方法-> 动作方法 -> interceptor方法返回;
+        2.3.3 在struts.xml配置文件中对应的package包下进行自定义拦截器的声明
+            a.<interceptors> :拦截器声明的根标签,里面可包含多个拦截器声明;
+            b.<interceptor>:单个拦截器的声明,其中该标签包含两个属性:
+                name属性:给自定义拦截器取个名字,唯一性
+                class属性:指定自定义拦截器对应的类路径
+            c.<interceptor-stack>: 声明一个拦截器栈,里面可包含多个拦截器对象;
+                该标签就一个name属性,即该拦截器栈的名称;
+                如果想往该栈中添加拦截器,则在该拦截器中添加字标签<interceptor-ref>;
+            d.<interceptor-ref>: 代表使用某个拦截器,可以在拦截器栈中添加,也可以在<action>标签中指明某个action动作使用某个拦截器;
+                该标签就一个name属性,表示使用的拦截器名称
+            e.<default-interceptor-ref>:该标签表示当前package使用的默认拦截器是谁,可以指向一个拦截器,也可以指向一个拦截器栈;
+                该标签在<package>标签中被定义,要求放在当前包下所有action之前;
+
+              注意:如果在action或者package中指定的拦截器是某个自定义的拦截器,则系统的一系列拦截器均失效
+               因此,在使用自定义拦截器时通常采用的方式是定义一个拦截器栈,拦截器栈中包含自己定义的拦截器,同时还包含struts默认的拦截器栈defaultStack
